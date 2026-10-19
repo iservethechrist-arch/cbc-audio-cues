@@ -1,41 +1,36 @@
-# CBC Audio Cues — Version 0.6 (PWA / Android tablet test build)
+# CBC Audio Cues — Version 0.7
 
-This is the **same offline-first manual audio player** as v0.5. It uses one imported local copy of each audio file in IndexedDB, and playlists refer to those files. No audio is uploaded to the web host, and playback never auto-advances.
+CBC Audio Cues is a local-first, manual audio player for Calvary Baptist Church. Playlists reference copies of user-imported audio in IndexedDB. Tracks **never advance automatically**. The app shell is hosted publicly via GitHub Pages, but imported music, playlists, and `.cbcbackup` files are **not uploaded** to GitHub.
 
-## Update Windows development version safely
+## Changes in v0.7
 
-1. **First export a backup** from Audio Library > Export Backup. Save the `.cbcbackup` file somewhere outside the app.
-2. Extract this ZIP. Open its `CBC-Cue-Player` folder.
-3. Copy **the files inside that folder** into the **existing `CBC-Cue-Player` folder** used by VS Code. Replace application files. Do not delete or rename the original folder.
-4. Continue using the **same Edge address and port**, e.g. `http://127.0.0.1:5500/CBC-Cue-Player/index.html`.
-5. Press Ctrl+Shift+R and verify music and playlists. Imported music is browser-managed data, NOT stored alongside the project files.
+- **Light and Dark themes:** The existing light theme remains the default. The new dark theme uses a charcoal-gray canvas and slightly lighter cards inspired by the approved GIMP mockup. Ready, Selected, Playing, Paused, Played, and Missing are visually differentiated. Choose a theme from the top-right **Settings** button. Themes are device-specific and remembered locally.
+- **Two track-selection behaviors:** **Tap to Play** (existing default) or **Select, then Play**. In Select, then Play mode, touching a card arms that track without starting it or interrupting currently playing audio. The bottom **Play** button starts it; if another track is playing or paused, a **Continue / Cancel** confirmation appears first. Cancel does not interrupt audio. The player clearly identifies a selected next track while showing the currently playing track beneath it.
+- **Android bottom system bar:** The app now applies theme-aware root backgrounds, color-scheme, and the PWA's theme-color meta setting. The final system navigation bar and button colors are controlled partly by Android/Chrome; confirm on the actual Galaxy Tab A9+.
+- **Improved Played contrast:** Completed tracks are easier to distinguish in both themes.
+- The IndexedDB database name (`CBC-Cue-Player`), schema, backup format, and manual playback / offline architecture **have not changed**. Layout choice (List/Cards) and Edit Mode behavior are unchanged.
 
-The application's existing IndexedDB name (`CBC-Cue-Player`) and backup format are unchanged.
+## Install/update on Windows VS Code
 
-## PWA and offline improvements in v0.6
+1. **Export a backup first** from the working installation: Audio Library → Export Backup. Save the `.cbcbackup` file somewhere outside the app folder.
+2. Extract the ZIP and open `CBC-Cue-Player`.
+3. Copy **its contents** into the **existing folder** in VS Code, replacing only the application files (not deleting the folder).
+4. Open exactly the same localhost address and port as before, then use Ctrl+Shift+R.
+5. Verify imported playlists/music are still present. They live in browser-managed IndexedDB keyed to the site's **origin** (including its port).
 
-- Updated service worker caches the app interface, stylesheet, JavaScript, icon and manifest for offline reopening once first loaded from HTTPS.
-- **Audio Library > Offline Setup** checks whether the app shell was cached on the hosted installation. Local VS Code Live Server shows a development-mode explanation instead. This check cannot guarantee that user audio persists.
-- Better caching update behavior when publishing future versions. No music files are uploaded by the app, and no playback or layout behavior has changed.
-- Manifest/icon support carried forward from v0.5; `.nojekyll` included for simple GitHub Pages publishing.
+## Publish updated files to GitHub Pages
 
-## Android tablet installation (Galaxy Tab A9+ SM-X210)
+In the public `cbc-audio-cues` repository: Code → Add file → Upload files. Upload **only the contents** of the app folder (including `index.html`, `app.js`, `style.css`, `manifest.webmanifest`, `sw.js`, icons, and `.nojekyll`), then commit to `main`. **Never upload MP3/WAV/M4A files, `.cbcbackup` files, passwords, or private data.** The `.nojekyll` file is hidden on some operating systems; it is already on your repo if previously uploaded.
 
-A PWA must be served from HTTPS (or `localhost` on the same device for development). The Windows laptop's local `127.0.0.1:5500` address cannot be used from the tablet. **Publish the app shell only** to a free HTTPS host such as GitHub Pages. Never publish audio recordings, `.cbcbackup` files, passwords, or user data to a public repository.
+GitHub Pages will deploy from `main` / `(root)` as before. Once deployed, open `https://iservethechrist-arch.github.io/cbc-audio-cues/` online. On Android, close/reopen the Home Screen app, and reload if it still shows an old version. Use **Audio Library → Offline Setup** to verify the **v7** offline shell cache. Then put the device in Airplane Mode, close/reopen, and test tracks and controls.
 
-For GitHub Pages, copy **the contents of `CBC-Cue-Player`** (including `index.html`, `.nojekyll`, `sw.js`, icons/, etc.) to the root of a dedicated public repository, enable Pages with branch `main`, folder `/(root)`, and use the HTTPS Pages address it provides. Do not upload the enclosing folder as the only file in the root.
+## Pre-service safety tests
 
-On the tablet: open that HTTPS address in **Google Chrome**, open **⋮**, select **Install app** (or **Add to Home screen**, depending on Chrome), and follow the prompts. Launch CBC Audio Cues from the tablet Home Screen. Import a small audio file first to test.
+1. Test **Tap to Play**, including Cancel and Continue before switching active tracks.
+2. Test **Select, then Play**: tapping a track must not play it; pressing Play should start it. While a different track is playing, selecting the next track must **not** stop the playing track; Play must ask for confirmation. Cancel must leave it uninterrupted.
+3. Verify switching themes and List/Cards layouts never affects playback.
+4. Verify Played visual contrast and readable buttons/settings on the actual tablet.
+5. Verify the Android navigation buttons are visible in light and dark themes. Android controls part of this appearance.
+6. Check each file and actual audio output; test offline playback, restart recovery, and backup export/restore.
 
-### Offline and reliability checklist
-
-1. With Wi-Fi on, open the installed application once and open **Audio Library > Offline Setup**. Verify **App files cached: YES**.
-2. Import two MP3 files in Edit Mode and make a playlist. Run **Check Files** on that playlist.
-3. Play, pause, stop, scrub, and switch List/Cards while playing. Confirm manually that the next song **never** starts by itself.
-4. While playing, tap the other card and select **Cancel**; the first track must continue. Select **Continue** and verify the switch.
-5. In Edit Mode, reorder a track via the touchscreen drag handle.
-6. Export a `.cbcbackup` to the tablet's Downloads or another safe location.
-7. Stop playback, **turn on Airplane Mode**, close and reopen the Home Screen app, play a song, and test all the above again. Also restart the tablet and repeat.
-8. **Do not use during a service** until storage and external audio-output reliability have been tested on the actual device (and later on the Music Director's iPad).
-
-Android and iPad browser-managed storage may be removed. **Keep the original audio files and exported backups outside CBC Audio Cues.** The storage persistence setting is best-effort, not a guarantee.
+Browser-managed storage can be cleared by the OS. Keep the original audio files and regular exported backups outside the PWA. Do not depend on a new version for live events until it has been tested on the actual devices.

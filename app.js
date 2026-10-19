@@ -1,4 +1,4 @@
-/* CBC Audio Cues — Android/iPad PWA test build v0.6.
+/* CBC Audio Cues — Android/iPad PWA test build v0.7.
  * All audio is stored locally in IndexedDB. Playlists store only references.
  * No automatic next-track code exists: the 'ended' event simply stops playback.
  */
@@ -9,7 +9,8 @@ const audio = $('audio-element');
 const state = {
   db: null, playlists: [], files: [], urls: new Map(), durations: new Map(),
   view: 'playlist', selectedPlaylistId: null, editMode: false, playbackLayout: 'list',
-  selectedCue: null, playback: 'idle', played: new Set(), pending: null,
+  selectedCue: null, armedCue: null, playback: 'idle', played: new Set(), pending: null,
+  theme: 'light', playbackBehavior: 'instant',
   nameHandler: null, busy: false
 };
 let toastTimeout;
@@ -92,6 +93,62 @@ function allCues(playlist) { return playlist?.cues || []; }
 function countReferences(fileId) { return state.playlists.reduce((n,p) => n + allCues(p).filter(c => c.fileId === fileId).length,0); }
 // Layout preference is intentionally outside the audio library database.
 // Edit Mode is always a one-column list regardless of the saved playback layout.
+// Simple local-only preferences; separate from IndexedDB and exported audio backups.
+const THEME_STORAGE_KEY = 'cbc-audio-cues-theme';
+const PLAYBACK_BEHAVIOR_STORAGE_KEY = 'cbc-audio-cues-track-behavior';
+function loadPreference(key, allowed, fallback) {
+  try { const value=localStorage.getItem(key); return allowed.includes(value) ? value : fallback; }
+  catch (_) {return fallback;}
+}
+function applyTheme(theme) {
+  state.theme = theme==='dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme=state.theme;
+  document.documentElement.style.colorScheme=state.theme;
+  // This helps Chrome and standalone PWAs color the system bars. Android
+  // owns its navigation icons, so the final colors depend on the device.
+  const themeColor=state.theme==='dark' ? '#10151c' : '#142d4a';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',themeColor);
+  document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')?.setAttribute('content',
+    state.theme==='dark' ? 'black-translucent' : 'default');
+  try {localStorage.setItem(THEME_STORAGE_KEY,state.theme);}catch(_){}
+}
+function setPlaybackBehavior(behavior) {
+  state.playbackBehavior = behavior==='select' ? 'select' : 'instant';
+  // Changing the preference never starts, pauses, or stops active audio.
+  state.armedCue=state.selectedCue ? {...state.selectedCue} : null;
+  try {localStorage.setItem(PLAYBACK_BEHAVIOR_STORAGE_KEY,state.playbackBehavior);}catch(_){}
+  render();
+}
+function sameCue(a,b) {return !!a && !!b && a.id===b.id && a.playlistId===b.playlistId;}
+function trackToPlay() {return state.playbackBehavior==='select' ? state.armedCue : state.selectedCue;}
+function selectCueOnly(cue,playlistId) {
+  const file=fileById(cue.fileId);
+  if(!file?.blob || !state.urls.has(cue.fileId)) {
+    alert(`Audio file unavailable: "${cue.label}".\n\nReimport the missing file before playing it.`);return;
+  }
+  state.armedCue={...cue,playlistId};
+  render();
+}
+function playFromControls() {
+  const target=trackToPlay();
+  if(!target)return;
+  const playlist=state.playlists.find(p=>p.id===target.playlistId);
+  const cue=playlist?.cues.find(c=>c.id===target.id);
+  if(!cue){toast('Selected track is no longer available. Select another song.');state.armedCue=null;render();return;}
+  if(sameCue(target,state.selectedCue)) {
+    if(state.playback==='playing')return;
+    return resume();
+  }
+  if(isAudioActive()) {
+    modal('Change Audio Track?',`"${state.selectedCue.label}" is currently ${state.playback}.\n\nStop it and start "${cue.label}"?\n\nCancel keeps the current track playing without interruption.`, 'Continue',()=>startCue(cue,playlist.id));
+  } else startCue(cue,playlist.id);
+}
+function openSettings() {
+  document.querySelector(`input[name="app-theme"][value="${state.theme}"]`).checked=true;
+  document.querySelector(`input[name="playback-behavior"][value="${state.playbackBehavior}"]`).checked=true;
+  $('settings-dialog').showModal();
+}
+
 const LAYOUT_STORAGE_KEY = 'cbc-audio-cues-playback-layout';
 function readPlaybackLayout() {
   try { return localStorage.getItem(LAYOUT_STORAGE_KEY) === 'grid' ? 'grid' : 'list'; }
@@ -131,25 +188,26 @@ function renderMain() {
   const options = state.editMode ? `<button type="button" class="secondary-button" data-action="rename-playlist">Rename</button><button type="button" class="secondary-button" data-action="duplicate-playlist">Duplicate</button><button type="button" class="danger-button" data-action="delete-playlist">Delete Playlist</button><button type="button" class="secondary-button" data-action="reset-played">Reset Played</button><button type="button" class="secondary-button" data-action="add-from-library">Add from Library</button><button type="button" class="primary-button" data-action="import">+ Import Audio</button>` : `<button class="secondary-button" type="button" data-action="check-files">Check Files</button>`;
   const layout=effectiveLayout();
   const layoutButtons=!state.editMode ? `<div class="layout-switch" role="group" aria-label="Playlist display"><button class="layout-button ${layout==='list'?'active':''}" type="button" data-action="switch-layout" data-layout="list" aria-pressed="${layout==='list'}" title="Show tracks in playback order">☷ <span>List</span></button><button class="layout-button ${layout==='grid'?'active':''}" type="button" data-action="switch-layout" data-layout="grid" aria-pressed="${layout==='grid'}" title="Show three-column cards">▦ <span>Cards</span></button></div>` : '';
-  main.innerHTML = `<div class="main-head"><div class="main-title"><h1>${escapeHtml(playlist.name)}</h1><p class="description">${playlist.cues.length} ${playlist.cues.length===1?'track':'tracks'} <span aria-hidden="true">·</span> ${state.editMode?'Drag handles or arrows change track order.':'Tap a song to play. Next track: always manual.'}</p></div><div class="main-actions">${layoutButtons}${options}</div></div>${state.editMode ? '<div class="edit-banner">Editing playlist · Reorder with the drag handle or ↑ and ↓. Rename, add, and remove tracks without deleting stored audio.</div>' : ''}${playlist.cues.length ? `<div class="cue-collection ${layout==='grid'?'cue-grid':'cue-list'}${state.editMode?' edit-list':''}" id="card-grid" data-playback-layout="${layout}">${playlist.cues.map((cue,i)=>cueCard(cue,i)).join('')}</div>` : emptyPanel('♫','No audio tracks yet','Switch to Edit Mode to import audio, or add an existing track from the Audio Library.',state.editMode?'<button class="primary-button" type="button" data-action="import">+ Import Audio</button>':'<button class="secondary-button" type="button" data-action="enable-edit">Switch to Edit Mode</button>')}`;
+  main.innerHTML = `<div class="main-head"><div class="main-title"><h1>${escapeHtml(playlist.name)}</h1><p class="description">${playlist.cues.length} ${playlist.cues.length===1?'track':'tracks'} <span aria-hidden="true">·</span> ${state.editMode?'Drag handles or arrows change track order.':state.playbackBehavior==='select'?'Tap to select a track, then press Play. Next track: always manual.':'Tap a song to play. Next track: always manual.'}</p></div><div class="main-actions">${layoutButtons}${options}</div></div>${state.editMode ? '<div class="edit-banner">Editing playlist · Reorder with the drag handle or ↑ and ↓. Rename, add, and remove tracks without deleting stored audio.</div>' : ''}${playlist.cues.length ? `<div class="cue-collection ${layout==='grid'?'cue-grid':'cue-list'}${state.editMode?' edit-list':''}" id="card-grid" data-playback-layout="${layout}">${playlist.cues.map((cue,i)=>cueCard(cue,i)).join('')}</div>` : emptyPanel('♫','No audio tracks yet','Switch to Edit Mode to import audio, or add an existing track from the Audio Library.',state.editMode?'<button class="primary-button" type="button" data-action="import">+ Import Audio</button>':'<button class="secondary-button" type="button" data-action="enable-edit">Switch to Edit Mode</button>')}`;
 }
 function cueCard(cue,index) {
   const file=fileById(cue.fileId);
   const isCurrent=state.selectedCue?.id===cue.id && state.selectedCue.playlistId===state.selectedPlaylistId;
   const isPlaying=isCurrent && state.playback==='playing';
   const isPaused=isCurrent && state.playback==='paused';
-  const isSelected=isCurrent && !isPlaying && !isPaused;
+  const isArmed=state.playbackBehavior==='select' && sameCue(state.armedCue,{...cue,playlistId:state.selectedPlaylistId});
+  const isSelected=isArmed && !isPlaying && !isPaused || (state.playbackBehavior==='instant' && isCurrent && !isPlaying && !isPaused);
   const completed=state.played.has(cue.id);
   const missing=!file?.blob;
   const className=['cue-card',state.editMode?'editing':'',isPlaying?'playing':'',isPaused?'paused':'',isSelected?'selected':'',completed?'completed':'',missing?'missing':''].filter(Boolean).join(' ');
-  const label=missing?'FILE MISSING':isPlaying?'PLAYING':isPaused?'PAUSED':completed?'PLAYED':'READY';
-  const statusIcon=missing?'!':state.editMode?'♫':isPlaying?'♫':isPaused?'Ⅱ':completed?'✓':'▶';
+  const label=missing?'FILE MISSING':isPlaying?'PLAYING':isPaused?'PAUSED':isSelected?'SELECTED':completed?'PLAYED':'READY';
+  const statusIcon=missing?'!':state.editMode?'♫':isPlaying?'♫':isPaused?'Ⅱ':isSelected?'●':completed?'✓':'▶';
   const number=String(index+1).padStart(2,'0');
   const duration=file?.duration?seconds(file.duration):missing?'Missing':'--:--';
   const filename=state.editMode?`<div class="cue-filename" title="${escapeHtml(file?.name||'Audio file unavailable')}">Source: ${escapeHtml(file?.name||'Audio file unavailable')}</div>`:'';
   const note=cue.note?.trim()?`<div class="cue-note">${escapeHtml(cue.note.trim())}</div>`:'';
   const edits=state.editMode?`<div class="edit-controls"><button type="button" class="drag-handle" data-drag-handle data-cue-id="${escapeHtml(cue.id)}" aria-label="Press and hold to drag ${escapeHtml(cue.label)} to another position" title="Hold and drag to reorder">⠿ <span>Drag</span></button><button type="button" class="mini-button" data-action="move-up" data-cue-id="${escapeHtml(cue.id)}" aria-label="Move ${escapeHtml(cue.label)} up" ${index===0?'disabled':''}>↑</button><button type="button" class="mini-button" data-action="move-down" data-cue-id="${escapeHtml(cue.id)}" aria-label="Move ${escapeHtml(cue.label)} down" ${index===allCues(selectedPlaylist()).length-1?'disabled':''}>↓</button><button type="button" class="mini-button" data-action="rename-cue" data-cue-id="${escapeHtml(cue.id)}">Edit</button><button type="button" class="mini-button remove" data-action="remove-cue" data-cue-id="${escapeHtml(cue.id)}">Remove</button></div>`:'';
-  const attrs=state.editMode?'draggable="true"':`role="button" tabindex="0" aria-label="Play ${escapeHtml(cue.label)}"`;
+  const attrs=state.editMode?'draggable="true"':`role="button" tabindex="0" aria-label="${state.playbackBehavior==='select'?'Select':'Play'} ${escapeHtml(cue.label)}" aria-pressed="${isSelected || isPlaying || isPaused}"`;
   const content=`<div class="cue-copy"><div class="cue-title">${escapeHtml(cue.label)}</div>${filename}${note}</div>`;
   if(effectiveLayout()==='list') {
     return `<article class="${className}" data-cue-id="${escapeHtml(cue.id)}" ${attrs}><span class="cue-order-list" aria-label="Track ${index+1}">${number}</span><span class="cue-icon" aria-hidden="true">${statusIcon}</span>${content}<div class="cue-trailing"><span class="cue-duration">${duration}</span><span class="cue-state">${label}</span></div>${edits}</article>`;
@@ -158,13 +216,23 @@ function cueCard(cue,index) {
 }
 function render() { renderNav(); renderMain(); updatePlayerUI(); }
 function updatePlayerUI() {
-  const selected = state.selectedCue;
-  $('player-title').textContent = selected?.label || 'Nothing selected';
-  const status = state.playback;
-  $('player-status').textContent = ({playing:'PLAYING',paused:'PAUSED',stopped:'STOPPED',ended:'FINISHED',error:'ERROR',idle:'READY'})[status] || 'READY';
-  $('play-button').disabled = !selected || status === 'playing';
-  $('pause-button').disabled = !selected || status !== 'playing';
-  $('stop-button').disabled = !selected || (status !== 'playing' && status !== 'paused' && status !== 'ended');
+  const selected=state.selectedCue;
+  const target=trackToPlay();
+  const status=state.playback;
+  const queued=state.playbackBehavior==='select' && target && !sameCue(target,selected);
+  const secondary=$('player-secondary');
+  $('player-title').textContent=queued ? target.label : (selected?.label || 'Nothing selected');
+  if(queued){
+    $('player-status').textContent='SELECTED · READY TO PLAY';
+    secondary.textContent=isAudioActive() ? `Currently ${status}: ${selected.label} — audio continues until you press Play and confirm.` : 'Press Play to start the selected track.';
+    secondary.hidden=false;
+  } else {
+    $('player-status').textContent=({playing:'PLAYING',paused:'PAUSED',stopped:'STOPPED',ended:'FINISHED',error:'ERROR',idle:'READY'})[status] || 'READY';
+    secondary.hidden=true;secondary.textContent='';
+  }
+  $('play-button').disabled=!target || (status==='playing' && !queued);
+  $('pause-button').disabled=!selected || status!=='playing';
+  $('stop-button').disabled=!selected || (status!=='playing' && status!=='paused' && status!=='ended');
   const slider = $('seek-slider');
   const duration = audio.duration;
   const canSeek = Boolean(selected) && Number.isFinite(duration) && duration > 0;
@@ -212,7 +280,7 @@ async function checkOfflineSetup() {
   }
   try {
     const registration = await navigator.serviceWorker.getRegistration('./');
-    const cache = await caches.open('cbc-audio-cues-shell-v6');
+    const cache = await caches.open('cbc-audio-cues-shell-v7');
     const files = ['./index.html','./style.css','./app.js','./manifest.webmanifest',
       './icons/icon-192.png','./icons/icon-512.png'];
     const missing = [];
@@ -286,7 +354,7 @@ function stopAudio(clearSelection=false) {
   releaseWakeLock();
   try { audio.currentTime = 0; } catch (_) { /* No loaded audio yet. */ }
   state.playback = 'stopped';
-  if (clearSelection) { state.selectedCue = null; audio.removeAttribute('src'); audio.load(); state.playback='idle'; }
+  if (clearSelection) { state.selectedCue = null; state.armedCue=null; audio.removeAttribute('src'); audio.load(); state.playback='idle'; }
   updatePlayerUI();
 }
 function startCue(cue,playlistId) {
@@ -300,6 +368,7 @@ function startCue(cue,playlistId) {
   releaseWakeLock();
   isScrubbing = false;
   state.selectedCue = {...cue,playlistId};
+  state.armedCue = {...cue,playlistId};
   audio.src = url;
   audio.load();
   state.playback = 'playing';
@@ -316,6 +385,7 @@ function tapCue(cueId) {
   if (state.editMode) return;
   const playlist = selectedPlaylist(), cue = currentCueFromPlaylist(cueId);
   if (!playlist || !cue) return;
+  if (state.playbackBehavior==='select') {selectCueOnly(cue,playlist.id);return;}
   if (state.selectedCue?.id === cue.id && state.selectedCue?.playlistId === playlist.id) {
     if (state.playback === 'playing') return;
     if (state.playback === 'paused') { resume(); return; }
@@ -607,6 +677,7 @@ async function executeMainAction(action, target) {
       });return;
       case 'delete-playlist': if(p) modal('Delete Playlist?',`Delete "${p.name}" and its ${p.cues.length} track references?\n\nNo audio files will be deleted.`,'Delete Playlist',async ()=>{
         await dbOperation('playlists','delete',p.id);state.playlists=state.playlists.filter(x=>x.id!==p.id);
+        if(state.armedCue?.playlistId===p.id)state.armedCue=null;
         state.selectedPlaylistId=state.playlists[0]?.id||null;render();toast('Playlist deleted. Audio library unchanged.');
       }); return;
       case 'add-from-library': return picker();
@@ -616,13 +687,16 @@ async function executeMainAction(action, target) {
         const cue=currentCueFromPlaylist(cueId); if (!cue||!p) return;
         return nameDialog('Edit Track',cue.label,'Display name',async (name,note)=>{
           cue.label=name; cue.note=note; await savePlaylist(p);render();
-          if(state.selectedCue?.id===cue.id && state.selectedCue?.playlistId===p.id) {state.selectedCue.label=name;updatePlayerUI();}
+          if(state.selectedCue?.id===cue.id && state.selectedCue?.playlistId===p.id) {state.selectedCue.label=name;}
+          if(sameCue(state.armedCue,{id:cue.id,playlistId:p.id}))state.armedCue.label=name;updatePlayerUI();
         },cue.note || '');
       }
       case 'remove-cue': {
         const cue=currentCueFromPlaylist(cueId); if(!p||!cue) return;
         return modal('Remove Track?',`Remove "${cue.label}" from "${p.name}"?\n\nIts audio file will remain in the Audio Library and any other playlists.`,'Remove Track',async ()=>{
-          p.cues=p.cues.filter(c=>c.id!==cue.id);await savePlaylist(p);render();toast('Track removed; audio file retained.');
+          p.cues=p.cues.filter(c=>c.id!==cue.id);await savePlaylist(p);
+          if(sameCue(state.armedCue,{id:cue.id,playlistId:p.id}))state.armedCue=null;
+          render();toast('Track removed; audio file retained.');
         });
       }
       case 'delete-file': {
@@ -632,6 +706,7 @@ async function executeMainAction(action, target) {
         return modal('Permanently Delete Stored Copy?',`Delete the imported copy of "${file.name}" from CBC Audio Cues?\n\nThis will also remove ${count} ${count===1?'track reference':'track references'} across all playlists. It cannot be undone.\n\nThe original file in the Files app or computer will NOT be deleted.`,'Delete Stored Copy',async ()=>{
           if(state.selectedCue?.fileId===file.id)stopAudio(true);
           for(const playlist of state.playlists){if(playlist.cues.some(c=>c.fileId===file.id)){playlist.cues=playlist.cues.filter(c=>c.fileId!==file.id);await savePlaylist(playlist);}}
+          if(state.armedCue?.fileId===file.id)state.armedCue=null;
           await dbOperation('files','delete',file.id);
           state.files=state.files.filter(f=>f.id!==file.id);URL.revokeObjectURL(state.urls.get(file.id));state.urls.delete(file.id);
           render();toast('Imported copy removed; source file untouched.');
@@ -645,11 +720,20 @@ async function executeMainAction(action, target) {
 function setupEvents() {
   setupPointerDrag();
   $('mode-toggle').addEventListener('click',()=>{state.editMode=!state.editMode;render();});
+  $('settings-toggle').addEventListener('click',openSettings);
+  $('settings-close').addEventListener('click',()=>$('settings-dialog').close());
+  $('settings-done').addEventListener('click',()=>$('settings-dialog').close());
+  $('settings-dialog').addEventListener('change',event=>{
+    if(event.target.name==='app-theme')applyTheme(event.target.value);
+    if(event.target.name==='playback-behavior')setPlaybackBehavior(event.target.value);
+  });
   $('new-playlist').addEventListener('click',createPlaylist);
   $('library-nav').addEventListener('click',()=>{state.view='library';render();});
   $('playlist-nav').addEventListener('click',e=>{
     const entry=e.target.closest('[data-playlist-id]');if (!entry) return;
-    state.selectedPlaylistId=entry.dataset.playlistId;state.view='playlist';render();
+    state.selectedPlaylistId=entry.dataset.playlistId;state.view='playlist';
+    if(state.playbackBehavior==='select' && !sameCue(state.armedCue,{id:state.selectedCue?.id,playlistId:state.selectedPlaylistId}))state.armedCue=null;
+    render();
   });
   $('main-content').addEventListener('click',e=>{
     const button=e.target.closest('[data-action]');
@@ -691,7 +775,7 @@ function setupEvents() {
     const files=Array.from(e.target.files);e.target.value='';
     importAudio(files,state.view==='playlist'?state.selectedPlaylistId:null);
   });
-  $('play-button').addEventListener('click',resume);
+  $('play-button').addEventListener('click',playFromControls);
   $('pause-button').addEventListener('click',pause);
   $('stop-button').addEventListener('click',()=>{stopAudio();render();});
 
@@ -784,6 +868,8 @@ async function init() {
     state.selectedPlaylistId=state.playlists[0]?.id||null;
     for(const file of state.files) if(file.blob) state.urls.set(file.id,URL.createObjectURL(file.blob));
     state.playbackLayout=readPlaybackLayout();
+    state.playbackBehavior=loadPreference(PLAYBACK_BEHAVIOR_STORAGE_KEY,['instant','select'],'instant');
+    applyTheme(loadPreference(THEME_STORAGE_KEY,['light','dark'],'light'));
     setupEvents();render();
     if('serviceWorker' in navigator && location.protocol==='https:' && location.hostname!=='localhost' && location.hostname!=='127.0.0.1') {
       navigator.serviceWorker.register('./sw.js').catch(error=>console.warn('Offline app-shell cache unavailable:',error));

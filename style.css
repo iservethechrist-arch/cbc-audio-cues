@@ -342,3 +342,144 @@ body { background:#f2f5f8; }
 .nav-count { font-size:12px; font-weight:700; color:#8092a6; margin-left:auto; font-variant-numeric:tabular-nums; }
 .nav-entry.active .nav-count { color:#3d729d; }
 @media(max-width:650px) { .nav-entry .nav-label { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .nav-count{display:none;} }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Version 0.7: light-theme refinement + charcoal-gray dark theme.
+   Dark palette based on the approved GIMP sample: canvas #111419,
+   cards #1c232b, blue reserved for selection / active playback.
+   The theme never changes stored audio, playlists or playback position.
+   ───────────────────────────────────────────────────────────────────── */
+:root { color-scheme:light; background:#142d4a; }
+body { background:#142d4a; }
+.app-shell { background:#f2f5f8; }
+.settings-button { color:#fff; background:transparent; border:1px solid #7994ac; border-radius:10px; min-height:45px; padding:8px 12px; font-weight:650; display:inline-flex; align-items:center; gap:7px; }
+.settings-button:hover { background:#263f59; }
+.settings-button span { font-size:13px; }
+.player-secondary { color:#c5d8ea; font-size:11px; line-height:1.35; max-width:370px; margin-top:2px; }
+.settings-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.settings-heading h2 { margin:0; }
+.settings-heading .icon-button { flex:0 0 auto; }
+.settings-fieldset { margin:18px 0 0; padding:0; border:0; }
+.settings-fieldset legend { display:block; width:100%; padding-bottom:6px; font-size:13px; font-weight:800; letter-spacing:.3px; }
+.settings-choice { display:flex!important; align-items:flex-start; gap:12px; padding:11px 12px; border-radius:9px; border:1px solid #d9e3ed; margin:8px 0!important; cursor:pointer; background:#f7f9fc; }
+.settings-choice:has(input:checked) { background:#e6f2fd; border-color:#4d92cd; }
+.settings-choice input { flex:0 0 auto; width:19px!important; height:19px!important; min-height:0!important; margin:2px 0 0; accent-color:#2679bd; }
+.settings-choice span { display:flex; flex-direction:column; gap:4px; }
+.settings-choice strong { font-size:14px; }
+.settings-choice small { font-size:12px; font-weight:450; line-height:1.42; color:#5e7287; }
+.settings-help { color:#5e7387; font-size:12px!important; margin:13px 0 0!important; }
+/* Improve the contrast of completed cues in the existing light theme. */
+.cue-list .cue-card.completed:not(.playing):not(.paused):not(.selected),
+.cue-grid .cue-card.completed:not(.playing):not(.paused):not(.selected) { background:#dce4ed; border-color:#bdcbd8; box-shadow:none; }
+.cue-card.completed:not(.playing):not(.paused):not(.selected) .cue-title { color:#50647a; }
+.cue-card.completed:not(.playing):not(.paused):not(.selected) .cue-icon { background:#c9d5e0; color:#536e86; }
+.cue-card.completed:not(.playing):not(.paused):not(.selected) .cue-note { background:#d2dfeb; color:#4e6479; }
+.cue-card.selected .cue-state { color:#1e72af; font-weight:850; }
+
+html[data-theme="dark"] { color-scheme:dark; background:#10151c; color:#f0f4f9; }
+html[data-theme="dark"] body,
+html[data-theme="dark"] .app-shell { background:#111419; color:#edf3fa; }
+html[data-theme="dark"] .topbar { background:#1a2028; border-bottom:1px solid #343f4c; box-shadow:none; }
+html[data-theme="dark"] .brand-symbol { background:#1b5184; border-color:#3689c9; }
+html[data-theme="dark"] .brand-subtitle { color:#a6bbd2; }
+html[data-theme="dark"] .sidebar { background:#1a2028; border-color:#323c47; }
+html[data-theme="dark"] .sidebar h2 { color:#9db0c5; }
+html[data-theme="dark"] .sidebar-tip { color:#92a4b6; border-color:#374351; }
+html[data-theme="dark"] .icon-button { background:#2b3542; color:#f3f8ff; border:1px solid #455569; }
+html[data-theme="dark"] .icon-button:hover { background:#39495c; }
+html[data-theme="dark"] .nav-entry,
+html[data-theme="dark"] .library-nav { color:#d7e2ed; }
+html[data-theme="dark"] .nav-icon { color:#9bb7d2; }
+html[data-theme="dark"] .nav-count,
+html[data-theme="dark"] .library-count { color:#a9bed1; }
+html[data-theme="dark"] .nav-entry.active,
+html[data-theme="dark"] .library-nav.active { background:#184670; color:#ffffff; box-shadow:inset 3px 0 #329fff; }
+html[data-theme="dark"] .nav-entry.active .nav-count { color:#f2f8fe; }
+html[data-theme="dark"] .nav-entry:hover,
+html[data-theme="dark"] .library-nav:hover { background:#28394a; }
+html[data-theme="dark"] .library-nav { border-color:#37414d; }
+html[data-theme="dark"] .main { background:#111419; }
+html[data-theme="dark"] .main h1 { color:#f2f5fa; }
+html[data-theme="dark"] .description { color:#aebccc; }
+html[data-theme="dark"] .layout-switch { background:#222c37; border-color:#445262; }
+html[data-theme="dark"] .layout-button { color:#aabbce; }
+html[data-theme="dark"] .layout-button.active { background:#294d71; color:#ffffff; box-shadow:none; }
+html[data-theme="dark"] .layout-button:hover:not(.active) { background:#324150; }
+html[data-theme="dark"] .primary-button { background:#216aab; border-color:#347dbb; color:#fff; }
+html[data-theme="dark"] .primary-button:hover { background:#2c79b8; }
+html[data-theme="dark"] .secondary-button { background:#222d39; border-color:#4c5b6c; color:#e1eaf4; }
+html[data-theme="dark"] .secondary-button:hover { background:#354556; }
+html[data-theme="dark"] .danger-button { background:#342931; border-color:#6d505a; color:#f7b4b9; }
+html[data-theme="dark"] .danger-button:hover { background:#4a2e38; }
+html[data-theme="dark"] .edit-banner { background:#302a20; border-color:#6b5a39; color:#e1c997; }
+html[data-theme="dark"] .empty-state { background:#1c232b; border-color:#465568; }
+html[data-theme="dark"] .empty-state p { color:#aebccc; }
+html[data-theme="dark"] .empty-icon { color:#a6c2e0; }
+html[data-theme="dark"] .library-item { background:#1c232b; border-color:#455464; }
+html[data-theme="dark"] .file-meta { color:#a7bacc; }
+html[data-theme="dark"] .cue-list .cue-card,
+html[data-theme="dark"] .cue-grid .cue-card { background:#1d252e; border-color:#3d4a59; box-shadow:0 2px 9px #00000022; }
+html[data-theme="dark"] .cue-list .cue-title,
+html[data-theme="dark"] .cue-grid .cue-title { color:#f2f6fb; }
+html[data-theme="dark"] .cue-order-list,
+html[data-theme="dark"] .cue-order { color:#9fb1c4; }
+html[data-theme="dark"] .cue-duration { color:#b8c7d6; }
+html[data-theme="dark"] .cue-state { color:#b0c2d4; }
+html[data-theme="dark"] .cue-icon { background:#314254; color:#b9dbfa; }
+html[data-theme="dark"] .cue-note { background:#2b3949; color:#e1ecf8; border-left-color:#3896e4; }
+html[data-theme="dark"] .cue-filename { color:#a8b7c8; }
+html[data-theme="dark"] .cue-card:not(.editing):hover { background:#283441; border-color:#829db7; box-shadow:0 3px 16px #00000038; }
+html[data-theme="dark"] .cue-list .cue-card.playing,
+html[data-theme="dark"] .cue-grid .cue-card.playing { background:#192634; border-color:#329bff; box-shadow:0 0 0 1px #1472c044,0 2px 16px #137ed044; }
+html[data-theme="dark"] .cue-card.playing .cue-state { color:#67bdff; }
+html[data-theme="dark"] .cue-card.playing .cue-icon { background:#2478bb; color:#fff; }
+html[data-theme="dark"] .cue-list .cue-card.paused,
+html[data-theme="dark"] .cue-grid .cue-card.paused { background:#222b37; border-color:#8cb6e0; }
+html[data-theme="dark"] .cue-card.paused .cue-state { color:#a8cdf2; }
+html[data-theme="dark"] .cue-list .cue-card.selected,
+html[data-theme="dark"] .cue-grid .cue-card.selected { background:#24384b; border-color:#72b1ec; box-shadow:0 0 0 1px #66b3f633; }
+html[data-theme="dark"] .cue-card.selected .cue-state { color:#86c9ff; }
+html[data-theme="dark"] .cue-card.selected .cue-icon { background:#365573; color:#b7e1ff; }
+html[data-theme="dark"] .cue-list .cue-card.completed:not(.playing):not(.paused):not(.selected),
+html[data-theme="dark"] .cue-grid .cue-card.completed:not(.playing):not(.paused):not(.selected) { background:#181e26; border-color:#333d49; box-shadow:none; }
+html[data-theme="dark"] .cue-card.completed:not(.playing):not(.paused):not(.selected) .cue-title { color:#b1c0cf; }
+html[data-theme="dark"] .cue-card.completed:not(.playing):not(.paused):not(.selected) .cue-icon { background:#2a3643; color:#93a9be; }
+html[data-theme="dark"] .cue-card.completed:not(.playing):not(.paused):not(.selected) .cue-note { background:#232f3c; color:#aabbca; }
+html[data-theme="dark"] .cue-card.completed .cue-state { color:#a4b4c5; }
+html[data-theme="dark"] .cue-card.missing { border-color:#b45b69; }
+html[data-theme="dark"] .cue-card.missing .cue-state { color:#f5a6b0; }
+html[data-theme="dark"] .mini-button { background:#2b3644; color:#e0ecf6; border-color:#536477; }
+html[data-theme="dark"] .mini-button:hover { background:#37495d; }
+html[data-theme="dark"] .mini-button.remove { color:#ffb0b4; }
+html[data-theme="dark"] .drag-handle { background:#24415d; border-color:#528ab6; color:#e7f5ff; }
+html[data-theme="dark"] .drag-handle.drag-handle-active { background:#345b7c; }
+html[data-theme="dark"] .edit-controls { border-color:#445160; }
+html[data-theme="dark"] .cue-card.drag-over { background:#2a485f!important; outline-color:#4badf5; }
+html[data-theme="dark"] .transport { background:#151e2a; border-color:#374960; color:white; box-shadow:0 -6px 20px #00000032; }
+html[data-theme="dark"] .player-status { color:#b4c9db; }
+html[data-theme="dark"] .time-row { color:#d2e0ec; }
+html[data-theme="dark"] .transport-button { background:#314255; border-color:#6b849c; }
+html[data-theme="dark"] .transport-button.play-button,
+html[data-theme="dark"] .transport-button.pause-button { background:#176bb2; border-color:#287fc3; }
+html[data-theme="dark"] .transport-button.stop-button { background:#1a2532; border-color:#6c849c; }
+html[data-theme="dark"] .dialog { background:#202a35; border-color:#4b5b6e; color:#f2f6fb; }
+html[data-theme="dark"] .dialog p { color:#becddd; }
+html[data-theme="dark"] .dialog input,
+html[data-theme="dark"] .dialog textarea { background:#111a23; color:#f5f8fc; border-color:#546779; }
+html[data-theme="dark"] .picker-item { background:#263443; border-color:#495a6d; }
+html[data-theme="dark"] .check-result { border-color:#3e4b59; }
+html[data-theme="dark"] .check-ready { color:#8ce0b0; }
+html[data-theme="dark"] .check-missing,
+html[data-theme="dark"] .check-unplayable { color:#f6a0a0; }
+html[data-theme="dark"] .check-unverified { color:#f6d28e; }
+html[data-theme="dark"] .check-disclaimer { color:#b8cadb!important; }
+html[data-theme="dark"] .settings-choice { background:#263340; border-color:#46576b; }
+html[data-theme="dark"] .settings-choice:has(input:checked) { background:#1d476b; border-color:#56aaff; }
+html[data-theme="dark"] .settings-choice small,
+html[data-theme="dark"] .settings-help { color:#b6c7d8; }
+html[data-theme="dark"] .loading-message { color:#a9c1d6; }
+@media(max-width:650px) {
+  .settings-button { padding:8px 10px; min-height:42px; }
+  .settings-button span { display:none; }
+  .topbar-actions { gap:6px; }
+}
