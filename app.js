@@ -1,4 +1,4 @@
-/* CBC Audio Cues — working prototype v0.5.
+/* CBC Audio Cues — Android/iPad PWA test build v0.6.
  * All audio is stored locally in IndexedDB. Playlists store only references.
  * No automatic next-track code exists: the 'ended' event simply stops playback.
  */
@@ -120,7 +120,7 @@ function renderMain() {
   if (state.view === 'library') {
     const files = state.files.slice().sort((a,b)=>a.name.localeCompare(b.name));
     const total = files.reduce((n,f)=>n+f.size,0);
-    main.innerHTML = `<div class="main-head"><div><h1>Audio Library</h1><p class="description">${files.length} stored audio ${files.length===1?'file':'files'} · ${prettySize(total)}. Playlists reference these files; removing a playlist never deletes audio.</p></div><div class="main-actions"><button class="secondary-button" type="button" data-action="backup">Export Backup</button><button class="secondary-button" type="button" data-action="restore">Restore Backup</button>${state.editMode ? '<button class="primary-button" type="button" data-action="import">+ Import Audio</button>' : ''}</div></div>${state.editMode ? '<div class="edit-banner">Library management: permanently deleting an imported copy requires confirmation and does not affect its original file in the iPad Files app or on your computer.</div>' : ''}${files.length ? `<div class="library-list">${files.map(f=>`<div class="library-item"><div><div class="file-title">${escapeHtml(f.name)}</div><div class="file-meta">${prettySize(f.size)} · Referenced ${countReferences(f.id)} ${countReferences(f.id)===1?'time':'times'}${f.duration ? ` · ${seconds(f.duration)}` : ''}</div></div><div class="library-item-actions">${state.editMode ? `<button class="danger-button" type="button" data-action="delete-file" data-file-id="${escapeHtml(f.id)}">Delete Stored Copy</button>` : ''}</div></div>`).join('')}</div>` : emptyPanel('♫','Your audio library is empty','Import audio files to make them available to your playlists.',state.editMode?'<button class="primary-button" type="button" data-action="import">+ Import Audio</button>':'<button class="secondary-button" type="button" data-action="enable-edit">Switch to Edit Mode</button>')}`;
+    main.innerHTML = `<div class="main-head"><div><h1>Audio Library</h1><p class="description">${files.length} stored audio ${files.length===1?'file':'files'} · ${prettySize(total)}. Playlists reference these files; removing a playlist never deletes audio.</p></div><div class="main-actions"><button class="secondary-button" type="button" data-action="backup">Export Backup</button><button class="secondary-button" type="button" data-action="restore">Restore Backup</button><button class="secondary-button" type="button" data-action="offline-check">Offline Setup</button>${state.editMode ? '<button class="primary-button" type="button" data-action="import">+ Import Audio</button>' : ''}</div></div>${state.editMode ? '<div class="edit-banner">Library management: permanently deleting an imported copy requires confirmation and does not affect its original file in the iPad Files app or on your computer.</div>' : ''}${files.length ? `<div class="library-list">${files.map(f=>`<div class="library-item"><div><div class="file-title">${escapeHtml(f.name)}</div><div class="file-meta">${prettySize(f.size)} · Referenced ${countReferences(f.id)} ${countReferences(f.id)===1?'time':'times'}${f.duration ? ` · ${seconds(f.duration)}` : ''}</div></div><div class="library-item-actions">${state.editMode ? `<button class="danger-button" type="button" data-action="delete-file" data-file-id="${escapeHtml(f.id)}">Delete Stored Copy</button>` : ''}</div></div>`).join('')}</div>` : emptyPanel('♫','Your audio library is empty','Import audio files to make them available to your playlists.',state.editMode?'<button class="primary-button" type="button" data-action="import">+ Import Audio</button>':'<button class="secondary-button" type="button" data-action="enable-edit">Switch to Edit Mode</button>')}`;
     return;
   }
   const playlist = selectedPlaylist();
@@ -197,6 +197,41 @@ function nameDialog(title,initialValue,label,handler,note=null) {
   $('name-dialog').showModal();
   $('name-input').focus(); $('name-input').select();
 }
+// An explicit diagnostic for pre-service setup. A cached shell is necessary but
+// not proof that audio survives device storage cleanup; Check Files and Airplane
+// Mode tests remain essential before any live service.
+async function checkOfflineSetup() {
+  const localHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (location.protocol !== 'https:' || localHost) {
+    alert('Offline Setup — Development Mode\n\nThe app works for development here, but automatic offline reopening needs an HTTPS installation.\n\nAfter hosting this version with HTTPS, open it on your tablet in Chrome, install it from Chrome’s menu, and return here to check the offline cache.');
+    return;
+  }
+  if (!('serviceWorker' in navigator) || !('caches' in window)) {
+    alert('Offline Setup\n\nThis browser does not support the offline-app cache required by CBC Audio Cues. Use current Google Chrome on Android or Safari on iPad.');
+    return;
+  }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration('./');
+    const cache = await caches.open('cbc-audio-cues-shell-v6');
+    const files = ['./index.html','./style.css','./app.js','./manifest.webmanifest',
+      './icons/icon-192.png','./icons/icon-512.png'];
+    const missing = [];
+    for (const path of files) {
+      if (!(await cache.match(new URL(path, location.href)))) missing.push(path);
+    }
+    const workerActive = Boolean(registration?.active);
+    let persistence = 'Unknown';
+    if (navigator.storage?.persisted) {
+      persistence = (await navigator.storage.persisted()) ? 'Granted' : 'Not guaranteed';
+    }
+    const shellReady = workerActive && !missing.length;
+    alert(`Offline Setup\n\nApp files cached: ${shellReady ? 'YES' : 'NOT YET'}\nStorage persistence: ${persistence}\n\n${shellReady ? 'The application interface is cached on this device.' : 'Connect to the internet, reload the app once, and try Offline Setup again.'}\n\nThis does not verify your music files. Run Check Files for every service playlist, keep external backups, and test by turning on Airplane Mode, closing and reopening the app, and playing music.`);
+  } catch (error) {
+    console.error(error);
+    alert('Could not check the offline app cache.\n\n'+error.message);
+  }
+}
+
 async function savePlaylist(playlist) { await dbOperation('playlists','put',playlist); }
 function currentCueFromPlaylist(cueId) { return selectedPlaylist()?.cues.find(c=>c.id === cueId); }
 async function createPlaylist() {
@@ -562,6 +597,7 @@ async function executeMainAction(action, target) {
       case 'check-files': return checkFiles();
       case 'backup': return exportBackup();
       case 'restore': return $('backup-input').click();
+      case 'offline-check': return checkOfflineSetup();
       case 'reset-played': {if(p) {for(const cue of p.cues) state.played.delete(cue.id);render();toast('Played indicators cleared for this playlist.');} return;}
       case 'rename-playlist': if (p) nameDialog('Rename Playlist',p.name,'Playlist name',async name=>{p.name=name; await savePlaylist(p);render();}); return;
       case 'duplicate-playlist': if(p) nameDialog('Duplicate Playlist',`${p.name} Copy`,'New playlist name',async name=>{
