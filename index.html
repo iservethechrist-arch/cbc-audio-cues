@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#132c48">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="CBC Audio Cues">
+  <meta name="description" content="A simple manual-track audio player for Calvary Baptist Church.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+  <title>CBC Audio Cues</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-symbol" aria-hidden="true"><span class="brand-triangle"></span></div>
+        <div><div class="brand-name">CBC Audio Cues</div><div class="brand-subtitle">CALVARY BAPTIST CHURCH</div></div>
+      </div>
+      <div class="topbar-actions">
+        <button class="mode-button" id="mode-toggle" type="button" aria-pressed="false">Edit Mode</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="sidebar" aria-label="Playlist navigation">
+        <div class="sidebar-header">
+          <h2>Playlists</h2>
+          <button class="icon-button" id="new-playlist" title="Create playlist" aria-label="Create playlist" type="button">+</button>
+        </div>
+        <div class="playlist-nav" id="playlist-nav"></div>
+        <button class="library-nav" id="library-nav" type="button"><span aria-hidden="true">▤</span><span>Audio Library</span><span class="library-count" id="library-count">0</span></button>
+        <div class="sidebar-tip">Manual playback only. Tracks never advance automatically.</div>
+      </aside>
+
+      <main class="main" id="main-content">
+        <div class="loading-message">Loading CBC Audio Cues…</div>
+      </main>
+    </div>
+
+    <section class="transport" aria-label="Playback controls">
+      <div class="now-playing">
+        <div id="player-status" class="player-status">READY</div>
+        <div id="player-title" class="player-title">Nothing selected</div>
+      </div>
+      <div class="time-row">
+        <span id="elapsed">0:00</span>
+        <input class="seek-slider" id="seek-slider" type="range" min="0" max="1000" step="1" value="0" disabled aria-label="Seek within selected audio track" title="Drag to move to another point in the song">
+        <span id="duration">0:00</span>
+      </div>
+      <div class="transport-buttons">
+        <button id="play-button" class="transport-button play-button" type="button" disabled aria-label="Play">▶ <span>Play</span></button>
+        <button id="pause-button" class="transport-button pause-button" type="button" disabled aria-label="Pause">Ⅱ <span>Pause</span></button>
+        <button id="stop-button" class="transport-button stop-button" type="button" disabled aria-label="Stop">■ <span>Stop</span></button>
+      </div>
+    </section>
+  </div>
+
+  <input id="backup-input" class="visually-hidden" type="file" accept=".cbcbackup,application/octet-stream">
+  <input id="file-input" class="visually-hidden" type="file" accept=".mp3,.wav,.m4a,.aac,audio/mpeg,audio/wav,audio/mp4,audio/aac" multiple>
+  <audio id="audio-element" preload="metadata"></audio>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="confirm-dialog" class="dialog" aria-labelledby="dialog-title">
+    <h2 id="dialog-title">Confirm action</h2>
+    <p id="dialog-message"></p>
+    <div class="dialog-actions">
+      <button class="secondary-button" id="dialog-cancel" type="button">Cancel</button>
+      <button class="primary-button" id="dialog-confirm" type="button">Continue</button>
+    </div>
+  </dialog>
+
+  <dialog id="name-dialog" class="dialog" aria-labelledby="name-dialog-title">
+    <form id="name-form">
+      <h2 id="name-dialog-title">Name</h2>
+      <label for="name-input" id="name-label">Name</label>
+      <input type="text" id="name-input" maxlength="110" required autocomplete="off">
+      <div id="note-field" hidden><label for="note-input">Cue notes (optional)</label>
+        <textarea id="note-input" rows="3" maxlength="600" placeholder="e.g. Start when choir is seated"></textarea></div>
+      <div class="dialog-actions"><button class="secondary-button" id="name-cancel" type="button">Cancel</button><button class="primary-button" type="submit">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="picker-dialog" class="dialog picker-dialog" aria-labelledby="picker-title">
+    <div class="picker-heading"><h2 id="picker-title">Add from Audio Library</h2><button class="icon-button" id="picker-close" type="button" aria-label="Close">×</button></div>
+    <p>Choose any audio file to add a track to this playlist. The file itself is not duplicated.</p>
+    <div id="picker-list" class="picker-list"></div>
+  </dialog>
+
+  <dialog id="check-dialog" class="dialog check-dialog" aria-labelledby="check-title">
+    <h2 id="check-title">Pre-Service Audio Check</h2>
+    <div id="check-results" class="check-results" aria-live="polite">Preparing check…</div>
+    <div class="dialog-actions"><button class="primary-button" id="check-close" type="button">Close</button></div>
+  </dialog>
+  <footer class="version-stamp">CBC Audio Cues · Prototype v0.5</footer>
+</body>
+</html>
