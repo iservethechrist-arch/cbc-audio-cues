@@ -1,4 +1,4 @@
-/* CBC Audio Cues — Android/iPad PWA test build v0.7.
+/* CBC Audio Cues — Android/iPad PWA test build v0.7.1.
  * All audio is stored locally in IndexedDB. Playlists store only references.
  * No automatic next-track code exists: the 'ended' event simply stops playback.
  */
@@ -104,6 +104,7 @@ function applyTheme(theme) {
   state.theme = theme==='dark' ? 'dark' : 'light';
   document.documentElement.dataset.theme=state.theme;
   document.documentElement.style.colorScheme=state.theme;
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content',state.theme);
   // This helps Chrome and standalone PWAs color the system bars. Android
   // owns its navigation icons, so the final colors depend on the device.
   const themeColor=state.theme==='dark' ? '#10151c' : '#142d4a';

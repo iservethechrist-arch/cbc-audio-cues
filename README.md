@@ -34,3 +34,12 @@ GitHub Pages will deploy from `main` / `(root)` as before. Once deployed, open `
 6. Check each file and actual audio output; test offline playback, restart recovery, and backup export/restore.
 
 Browser-managed storage can be cleared by the OS. Keep the original audio files and regular exported backups outside the PWA. Do not depend on a new version for live events until it has been tested on the actual devices.
+
+## Version 0.7.1 — Android PWA system-bar experiment
+
+- Sets a `color-scheme` meta tag and updates it with the existing Light/Dark preference.
+- Aligns the manifest launch/background and theme color to charcoal for standalone startup; JavaScript still applies the light theme color in Light mode.
+- Preserves the existing IndexedDB name and all audio/playlist behavior.
+- Advances the service-worker shell cache version so installed devices can retrieve the update.
+
+Android/Samsung controls system navigation and taskbar colors. These changes are a best-effort test, not a guaranteed override of the Samsung taskbar. Back up the library before updating. Do **not** uninstall or clear site data to refresh the app.

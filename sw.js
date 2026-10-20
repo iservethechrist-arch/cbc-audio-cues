@@ -1,6 +1,6 @@
-/* CBC Audio Cues v0.7: offline app shell only. Imported music is private
+/* CBC Audio Cues v0.7.1: offline app shell only. Imported music is private
    on-device data in IndexedDB, never placed in the service worker cache. */
-const CACHE_NAME = 'cbc-audio-cues-shell-v7';
+const CACHE_NAME = 'cbc-audio-cues-shell-v7-1';
 const SHELL = ['./', './index.html', './style.css', './app.js',
   './manifest.webmanifest', './icons/icon-180.png',
   './icons/icon-192.png', './icons/icon-512.png'];
